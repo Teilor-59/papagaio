@@ -1,0 +1,14 @@
+# gerados: compilação, sinais de teste e relatórios
+build/
+testes/sinais/
+testes/saida/
+
+# o JUCE é baixado à parte (clone raso da tag 9.0.3); não vai para o repositório
+externos/JUCE/
+
+# Python e sistema
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+~$*.docx

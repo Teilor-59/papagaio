@@ -1,0 +1,48 @@
+# Compila o Papagaio para macOS num Mac da nuvem do GitHub: um Papagaio.app universal (Apple Silicon e Intel),
+# confere o motor com os sinais de teste e deixa o .app zipado para baixar em "Artifacts".
+name: macOS
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  mac:
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Baixar o JUCE 9.0.3
+        run: git clone --depth 1 --branch 9.0.3 https://github.com/juce-framework/JUCE.git externos/JUCE
+
+      - name: Configurar
+        run: cmake -S . -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Compilar
+        run: cmake --build build --config Release -- -quiet
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Conferir o motor
+        run: |
+          python -m pip install --quiet numpy
+          python -X utf8 tools/gerar_sinais_teste.py
+          python -X utf8 tools/conferir_detector.py
+
+      - name: Empacotar
+        run: |
+          APP=build/app/Papagaio_artefacts/Release/Papagaio.app
+          # assinatura ad hoc: sem ela o Apple Silicon nem abre; não substitui a notarização da Apple
+          codesign --force --deep --sign - "$APP"
+          lipo -info "$APP/Contents/MacOS/Papagaio"
+          mkdir -p pacote
+          ditto -c -k --keepParent "$APP" pacote/Papagaio-macOS.zip
+          cp build/offline/Release/papagaio-offline pacote/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Papagaio-macOS
+          path: pacote/
